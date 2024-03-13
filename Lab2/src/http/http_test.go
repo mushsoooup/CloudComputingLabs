@@ -11,7 +11,7 @@ func TestFormatResponse(t *testing.T) {
 
 func TestParams(t *testing.T) {
 	r := Request{}
-	r.SetPath("/abc/cde?a=c&b=d")
+	r.SetPath([]byte("/abc/cde?a=c&b=d"))
 	if r.GetPath() != "/abc/cde" {
 		log.Printf("wrong path /abc/cde -> %v\n", r.GetPath())
 	}

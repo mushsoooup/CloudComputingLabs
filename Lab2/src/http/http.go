@@ -1,8 +1,8 @@
 package http
 
 import (
+	"bytes"
 	"strconv"
-	"strings"
 )
 
 func StatusMessage(status int64) []byte {
@@ -49,47 +49,47 @@ type Request struct {
 func (r *Request) Reset() {
 	r.method = ""
 	r.path = ""
-	r.params = make(map[string]string)
-	r.headers = make(map[string]string)
-	r.data = make([]byte, 0)
+	clear(r.params)
+	clear(r.headers)
+	r.data = r.data[:0]
 }
 
-func (r *Request) SetMethod(method string) {
-	r.method = method
+func (r *Request) SetMethod(method []byte) {
+	r.method = string(method)
 }
-func (r *Request) SetPath(path string) {
-	idx := strings.Index(path, "?")
+func (r *Request) SetPath(path []byte) {
+	idx := bytes.IndexByte(path, '?')
 	if idx == -1 {
-		r.path = path
+		r.path = string(path)
 		return
 	}
-	r.path = path[:idx]
-	params := strings.Split(path[idx+1:], "&")
+	r.path = string(path[:idx])
+	params := bytes.Split(path[idx+1:], []byte{'&'})
 	if r.params == nil {
 		r.params = make(map[string]string)
 	}
 	for _, param := range params {
-		idx := strings.Index(param, "=")
+		idx := bytes.IndexByte(param, '=')
 		if idx == -1 {
 			continue
 		}
-		r.params[param[:idx]] = param[idx+1:]
+		r.params[string(param[:idx])] = string(param[idx+1:])
 	}
 }
 func (r *Request) SetData(data []byte) {
-	r.data = data
+	r.data = append(r.data[:0], data...)
 }
 func (r *Request) AddHeader(key, val string) {
 	if r.headers == nil {
 		r.headers = make(map[string]string)
-		r.headers[key] = val
 	}
+	r.headers[key] = val
 }
 func (r *Request) GetMethod() string {
-	return r.method
+	return string(r.method)
 }
 func (r *Request) GetPath() string {
-	return r.path
+	return string(r.path)
 }
 func (r *Request) GetParam(key string) string {
 	return r.params[key]
@@ -109,8 +109,8 @@ type Response struct {
 }
 
 func (r *Response) Reset() {
-	r.headers = make(map[string]string)
-	r.data = make([]byte, 0)
+	clear(r.headers)
+	r.data = r.data[:0]
 	r.status = 0
 	r.contentType = ""
 }

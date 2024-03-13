@@ -11,7 +11,7 @@ import (
 
 func TestStatic(t *testing.T) {
 	r := Router{}
-	err := r.LoadStatic("/config/CloudComputingLabs/Lab2/static", "/")
+	err := r.LoadStatic("/config/CloudComputingLabs/Lab2/static")
 	if err != nil {
 		t.Fatalf("error loading static %v", err)
 	}
@@ -91,7 +91,8 @@ func test404(c *http.Client, t *testing.T) {
 }
 
 func testWrongMethod(c *http.Client, t *testing.T) {
-	res, err := c.Post("http://127.0.0.1:65530/index.html", "text/plain", strings.NewReader("test message"))
+	req, _ := http.NewRequest("Post", "http://127.0.0.1:65530/index.html", strings.NewReader("test message"))
+	res, err := c.Do(req)
 	if err != nil {
 		t.Fatalf("error requesting static file %v", err)
 	}

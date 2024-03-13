@@ -4,6 +4,7 @@ import (
 	"io"
 	"main/logger"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -22,16 +23,20 @@ type Pool struct {
 	workersCnt     int
 	workerChanPool sync.Pool
 }
+
 type workerChan struct {
 	lastUsed time.Time
 	ch       chan net.Conn
 }
 
+// get tries to abtain a workerChan to throw job to
+// fails when cocurrently running goroutines reach maximum
 func (p *Pool) get() *workerChan {
 	var ch *workerChan
 
 	new := false
 
+	// First try to use existing idle worker
 	p.lock.Lock()
 	ready := p.ready
 	n := len(ready) - 1
@@ -47,6 +52,7 @@ func (p *Pool) get() *workerChan {
 	}
 	p.lock.Unlock()
 
+	// If no idle worker and we can create new worker
 	if ch == nil && new {
 		vch := p.workerChanPool.Get()
 		ch = vch.(*workerChan)
@@ -66,7 +72,9 @@ func (p *Pool) worker(ch *workerChan) {
 		if c == nil {
 			break
 		}
-		if err = p.workerFunc(c); err != nil && err != io.EOF {
+		// connection reset by peer is normal
+		if err = p.workerFunc(c); err != nil && err != io.EOF &&
+			!strings.Contains(err.Error(), "reset by peer") {
 			logger.Debug("error serving %q<->%q: %v", c.LocalAddr(), c.RemoteAddr(), err)
 		}
 		_ = c.Close()
@@ -80,6 +88,7 @@ func (p *Pool) worker(ch *workerChan) {
 	p.lock.Unlock()
 }
 
+// Start starts a Pool using handler and sets cocurrency
 func (p *Pool) Start(handler ConnHandler, cocurrency int) {
 	p.workerFunc = handler
 	p.cocurrency = cocurrency
@@ -98,6 +107,7 @@ func (p *Pool) Start(handler ConnHandler, cocurrency int) {
 	}()
 }
 
+// Serve serves a connection
 func (p *Pool) Serve(c net.Conn) bool {
 	ch := p.get()
 	if ch == nil {

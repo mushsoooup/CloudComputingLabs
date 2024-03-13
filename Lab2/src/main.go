@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"main/router"
+)
 
 func main() {
-	fmt.Println("Hello, World!")
+	r := router.Router{}
+	r.LoadStatic("/config/CloudComputingLabs/Lab2/static")
+	r.Serve(":65500")
 }
